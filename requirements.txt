@@ -8,3 +8,4 @@ tree-sitter-javascript>=0.21.4
 chromadb>=0.5.0
 pytest==8.3.2
 pytest-mock==3.14.0
+azure-ai-inference>=1.0.0b9
