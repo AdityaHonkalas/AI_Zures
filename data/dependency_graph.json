@@ -1,0 +1,42 @@
+{
+  "nodes": [
+    "checkout",
+    "payment",
+    "cart",
+    "product-catalog",
+    "user-auth",
+    "notification",
+    "order-history",
+    "search",
+    "recommendations",
+    "wishlist"
+  ],
+  "edges": [
+    ["checkout",        "payment"],
+    ["checkout",        "cart"],
+    ["checkout",        "notification"],
+    ["checkout",        "order-history"],
+    ["cart",            "product-catalog"],
+    ["cart",            "user-auth"],
+    ["payment",         "notification"],
+    ["payment",         "order-history"],
+    ["search",          "product-catalog"],
+    ["search",          "recommendations"],
+    ["recommendations", "product-catalog"],
+    ["wishlist",        "product-catalog"],
+    ["wishlist",        "user-auth"],
+    ["user-auth",       "notification"]
+  ],
+  "module_file_map": {
+    "checkout":        ["src/checkout/", "src/checkout/cart.py", "src/checkout/order.py"],
+    "payment":         ["src/payment/", "src/payment/processor.py", "src/payment/gateway.py"],
+    "cart":            ["src/cart/", "src/cart/cart.py", "src/cart/items.py"],
+    "product-catalog": ["src/catalog/", "src/catalog/product.py", "src/catalog/category.py"],
+    "user-auth":       ["src/auth/", "src/auth/login.py", "src/auth/session.py"],
+    "notification":    ["src/notifications/", "src/notifications/email.py", "src/notifications/sms.py"],
+    "order-history":   ["src/orders/", "src/orders/history.py", "src/orders/detail.py"],
+    "search":          ["src/search/", "src/search/query.py", "src/search/index.py"],
+    "recommendations": ["src/recommendations/", "src/recommendations/engine.py"],
+    "wishlist":        ["src/wishlist/", "src/wishlist/list.py"]
+  }
+}

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analysis Results — Agentic Testing Platform</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+  <style>
+    body { background: #f7f8fa; }
+    .topbar { background: #1f2328; color: #fff; padding: 1rem 0; margin-bottom: 1.5rem; }
+    .topbar h1 { font-size: 1.3rem; font-weight: 700; margin: 0; }
+    .topbar .meta { color: #adb5bd; font-size: 0.85rem; }
+    .badge-score { font-size: 0.75rem; }
+    .score-bar-wrap { background:#e5e7eb; border-radius:4px; height:8px; width:100px; display:inline-block; vertical-align:middle; }
+    .score-bar { background:#3b82d4; height:8px; border-radius:4px; }
+    .score-high  .score-bar { background:#dc3545; }
+    .score-med   .score-bar { background:#ffc107; }
+    .score-low   .score-bar { background:#198754; }
+    pre.gherkin  { background:#1f2328; color:#d4f0a0; border-radius:6px; padding:1rem; font-size:0.82rem; white-space:pre-wrap; }
+    pre.playwright { background:#1a1a2e; color:#a8dadc; border-radius:6px; padding:1rem; font-size:0.82rem; white-space:pre-wrap; }
+    .module-badge { font-size:0.75rem; margin:2px; }
+    .journey-row td { vertical-align:middle; }
+    .tab-content { background:#fff; border:1px solid #e5e7eb; border-top:none; border-radius:0 0 6px 6px; padding:1.5rem; }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div class="container d-flex justify-content-between align-items-center">
+    <h1>🧪 Analysis Results</h1>
+    <div>
+      <span class="meta">PR: </span>
+      <a href="{{ context.pr_url }}" target="_blank" class="text-info" style="font-size:0.85rem;">{{ context.pr_url }}</a>
+      &nbsp;
+      <a href="/" class="btn btn-sm btn-outline-light ms-2">← New Analysis</a>
+    </div>
+  </div>
+</div>
+
+<div class="container mb-5">
+
+  {# ── Error banner ── #}
+  {% if context.errors %}
+  <div class="alert alert-warning">
+    <strong>⚠ Some agents reported errors:</strong>
+    <ul class="mb-0 mt-1">
+      {% for e in context.errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {# ── Tab navigation ── #}
+  <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-impact"   type="button">🗺 Impact Map</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-risk"     type="button">⚠ Risk Scores</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-suite"    type="button">✅ Recommended Suite</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-generated" type="button">🧬 Generated Tests</button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="resultTabContent">
+
+    {# ══════════════════════════════════════════════════════════ #}
+    {# TAB 1 — Impact Map                                        #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade show active" id="tab-impact" role="tabpanel">
+      {% set im = context.impact_map %}
+      {% if not im %}
+        <p class="text-muted">No impact map data available.</p>
+      {% else %}
+
+        <h6 class="fw-semibold mb-2">Directly Impacted Modules</h6>
+        <div class="mb-3">
+          {% for m in im.get('directly_impacted_modules', []) %}
+            <span class="badge bg-danger module-badge">{{ m }}</span>
+          {% else %}
+            <span class="text-muted">None</span>
+          {% endfor %}
+        </div>
+
+        <h6 class="fw-semibold mb-2">Transitively Impacted Modules</h6>
+        <div class="mb-3">
+          {% for m in im.get('transitively_impacted_modules', []) %}
+            <span class="badge bg-warning text-dark module-badge">{{ m }}</span>
+          {% else %}
+            <span class="text-muted">None</span>
+          {% endfor %}
+        </div>
+
+        <h6 class="fw-semibold mb-2">User Journeys</h6>
+        <table class="table table-sm table-bordered mb-3">
+          <thead class="table-light">
+            <tr><th>Journey ID</th><th>Name</th><th>Impacted Modules</th></tr>
+          </thead>
+          <tbody>
+            {% for j in im.get('user_journeys', []) %}
+            <tr class="journey-row">
+              <td><code>{{ j.journey_id }}</code></td>
+              <td>{{ j.name }}</td>
+              <td>
+                {% for m in j.get('impacted_modules', []) %}
+                  <span class="badge bg-secondary module-badge">{{ m }}</span>
+                {% endfor %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-muted">No journeys identified.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <h6 class="fw-semibold mb-2">Browser / Environment Matrix</h6>
+        <table class="table table-sm table-bordered">
+          <thead class="table-light">
+            <tr><th>Browser</th><th>Environment</th></tr>
+          </thead>
+          <tbody>
+            {% for row in im.get('browser_env_matrix', []) %}
+            <tr>
+              <td>{{ row.browser }}</td>
+              <td>{{ row.env }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-muted">No matrix entries.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      {% endif %}
+    </div>
+
+    {# ══════════════════════════════════════════════════════════ #}
+    {# TAB 2 — Risk Scores                                       #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade" id="tab-risk" role="tabpanel">
+      {% set rr = context.risk_ranked_tests %}
+      {% if not rr or not rr.get('ranked_tests') %}
+        <p class="text-muted">No risk ranking data available.</p>
+      {% else %}
+        <table class="table table-sm table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>#</th><th>Test</th><th>Risk Score</th>
+              <th>Defect</th><th>Telemetry</th><th>Churn</th><th>Semantic</th>
+              <th>Justification</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in rr.ranked_tests %}
+            {% set score = t.risk_score | float %}
+            {% set level = 'score-high' if score >= 0.7 else ('score-med' if score >= 0.4 else 'score-low') %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td><code>{{ t.test_id }}</code><br/><small>{{ t.test_name }}</small></td>
+              <td>
+                <div class="score-bar-wrap {{ level }}">
+                  <div class="score-bar" style="width:{{ (score * 100)|int }}%"></div>
+                </div>
+                <span class="ms-1 small">{{ "%.2f"|format(score) }}</span>
+              </td>
+              {% set sb = t.get('score_breakdown', {}) %}
+              <td>{{ "%.2f"|format(sb.get('defect_score', 0)|float) }}</td>
+              <td>{{ "%.2f"|format(sb.get('telemetry_score', 0)|float) }}</td>
+              <td>{{ "%.2f"|format(sb.get('churn_score', 0)|float) }}</td>
+              <td>{{ "%.2f"|format(sb.get('semantic_score', 0)|float) }}</td>
+              <td><small class="text-muted">{{ t.get('justification', '—') }}</small></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </div>
+
+    {# ══════════════════════════════════════════════════════════ #}
+    {# TAB 3 — Recommended Suite                                 #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade" id="tab-suite" role="tabpanel">
+      {% set rs = context.recommended_suite %}
+      {% if not rs or not rs.get('suite') %}
+        <p class="text-muted">No suite recommendation available.</p>
+      {% else %}
+
+        <div class="d-flex gap-4 mb-3">
+          <div class="text-center">
+            <div class="fw-bold fs-5">{{ rs.suite | length }}</div>
+            <div class="text-muted small">Tests Selected</div>
+          </div>
+          <div class="text-center">
+            {% set total = rs.get('total_estimated_duration_s', 0) | int %}
+            <div class="fw-bold fs-5">{{ (total // 60) }}m {{ (total % 60) }}s</div>
+            <div class="text-muted small">Est. Duration</div>
+          </div>
+          <div class="text-center">
+            {% set budget = rs.get('budget_limit_s', 1800) | int %}
+            <div class="fw-bold fs-5">{{ (budget // 60) }}m</div>
+            <div class="text-muted small">Budget</div>
+          </div>
+          {% if rs.get('coverage_gaps') %}
+          <div class="text-center text-danger">
+            <div class="fw-bold fs-5">{{ rs.coverage_gaps | length }}</div>
+            <div class="text-muted small">Coverage Gaps</div>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if rs.get('coverage_gaps') %}
+        <div class="alert alert-warning py-2">
+          <strong>Coverage gaps:</strong> {{ rs.coverage_gaps | join(', ') }}
+        </div>
+        {% endif %}
+
+        <table class="table table-sm table-bordered table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Priority</th><th>Test ID</th><th>Test Name</th>
+              <th>Browser</th><th>Environment</th><th>Est. Duration</th><th>Justification</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in rs.suite | sort(attribute='priority') %}
+            <tr>
+              <td><span class="badge bg-primary">{{ t.priority }}</span></td>
+              <td><code>{{ t.test_id }}</code></td>
+              <td>{{ t.test_name }}</td>
+              <td>{{ t.browser }}</td>
+              <td>{{ t.environment }}</td>
+              <td>{{ t.estimated_duration_s }}s</td>
+              <td><small class="text-muted">{{ t.get('justification', '—') }}</small></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      {% endif %}
+    </div>
+
+    {# ══════════════════════════════════════════════════════════ #}
+    {# TAB 4 — Generated Tests                                   #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade" id="tab-generated" role="tabpanel">
+      {% set gs = context.generated_scenarios %}
+      {% if not gs or not gs.get('scenarios') %}
+        <div class="alert alert-success">
+          ✅ No coverage gaps found — all impacted journeys have existing tests.
+        </div>
+      {% else %}
+        <p class="text-muted small mb-3">
+          {{ gs.scenarios | length }} new scenario(s) generated for uncovered journey(s):
+          <strong>{{ gs.get('coverage_gaps', []) | join(', ') }}</strong>
+        </p>
+
+        {% for s in gs.scenarios %}
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><strong>{{ s.journey_id }}</strong> — {{ s.get('feature_file', '') }}</span>
+            <span class="badge bg-secondary">ai-generated</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="p-3 pb-1">
+              <small class="text-muted fw-semibold text-uppercase">Gherkin Feature</small>
+            </div>
+            <pre class="gherkin mx-3 mb-2">{{ s.gherkin }}</pre>
+
+            {% if s.get('playwright_stub') %}
+            <div class="px-3 pb-1">
+              <small class="text-muted fw-semibold text-uppercase">Playwright TypeScript Stub</small>
+            </div>
+            <pre class="playwright mx-3 mb-3">{{ s.playwright_stub }}</pre>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+  </div>{# /tab-content #}
+</div>
+
+<div class="text-center text-muted py-3" style="font-size:0.8rem; border-top:1px solid #e5e7eb;">
+  Agentic Testing Platform — Local Development Mode &nbsp;|&nbsp; Ollama + ChromaDB
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+{
+  "checkout": [
+    {"browser": "chrome",  "env": "staging"},
+    {"browser": "chrome",  "env": "production"},
+    {"browser": "edge",    "env": "staging"},
+    {"browser": "firefox", "env": "staging"}
+  ],
+  "payment": [
+    {"browser": "chrome",  "env": "staging"},
+    {"browser": "chrome",  "env": "production"},
+    {"browser": "edge",    "env": "staging"}
+  ],
+  "cart": [
+    {"browser": "chrome",  "env": "staging"},
+    {"browser": "firefox", "env": "staging"},
+    {"browser": "edge",    "env": "staging"}
+  ],
+  "user-auth": [
+    {"browser": "chrome",  "env": "staging"},
+    {"browser": "edge",    "env": "staging"}
+  ],
+  "notification": [
+    {"browser": "chrome",  "env": "staging"}
+  ],
+  "order-history": [
+    {"browser": "chrome",  "env": "staging"},
+    {"browser": "chrome",  "env": "production"}
+  ],
+  "search": [
+    {"browser": "chrome",  "env": "staging"},
+    {"browser": "firefox", "env": "staging"}
+  ],
+  "product-catalog": [
+    {"browser": "chrome",  "env": "staging"},
+    {"browser": "firefox", "env": "staging"},
+    {"browser": "edge",    "env": "staging"}
+  ],
+  "recommendations": [
+    {"browser": "chrome",  "env": "staging"}
+  ],
+  "wishlist": [
+    {"browser": "chrome",  "env": "staging"},
+    {"browser": "edge",    "env": "staging"}
+  ]
+}

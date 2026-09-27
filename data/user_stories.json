@@ -1,0 +1,107 @@
+[
+  {
+    "story_id": "US-101",
+    "title": "Complete Checkout with Saved Payment Method",
+    "journey_id": "UJ-02",
+    "module": "checkout",
+    "description": "As a returning customer, I want to complete the checkout process using a saved payment method so that I can purchase products quickly without re-entering card details.",
+    "acceptance_criteria": [
+      "Given a logged-in user with a saved payment method, when they proceed to checkout, then their saved card is pre-selected.",
+      "Given the saved card is selected, when the user confirms the order, then payment is processed and an order confirmation is shown.",
+      "Given the payment fails, when the user retries, then the cart is not cleared and the user can select a different payment method.",
+      "Given the order is confirmed, when the checkout completes, then the user receives an email confirmation within 2 minutes."
+    ],
+    "priority": "high",
+    "linked_modules": ["checkout", "payment", "notification"]
+  },
+  {
+    "story_id": "US-204",
+    "title": "Apply Discount Coupon at Checkout",
+    "journey_id": "UJ-02",
+    "module": "checkout",
+    "description": "As a customer, I want to apply a discount coupon code during checkout so that I can receive the advertised discount on my purchase.",
+    "acceptance_criteria": [
+      "Given a valid coupon code, when the user enters it at checkout, then the discount is applied and the total is updated.",
+      "Given an expired coupon code, when the user enters it, then an error message is shown and the total is not changed.",
+      "Given a coupon with a minimum order value, when the cart total is below the minimum, then the coupon is rejected with a clear message.",
+      "Given a coupon is applied, when the user removes an item causing the total to drop below the minimum, then the coupon is automatically removed."
+    ],
+    "priority": "high",
+    "linked_modules": ["checkout", "cart"]
+  },
+  {
+    "story_id": "US-305",
+    "title": "Guest Checkout Without Account",
+    "journey_id": "UJ-03",
+    "module": "checkout",
+    "description": "As a new visitor, I want to complete a purchase without creating an account so that I can buy products quickly without registration overhead.",
+    "acceptance_criteria": [
+      "Given an unauthenticated user, when they add an item to cart and proceed to checkout, then they are offered a guest checkout option.",
+      "Given guest checkout is selected, when the user provides email, shipping address, and payment details, then the order is placed successfully.",
+      "Given the order is placed as a guest, when checkout completes, then a confirmation email is sent to the provided email address.",
+      "Given a guest checkout, when the order is complete, then the user is offered the option to create an account."
+    ],
+    "priority": "medium",
+    "linked_modules": ["checkout", "payment", "notification"]
+  },
+  {
+    "story_id": "US-401",
+    "title": "Multi-factor Authentication Login",
+    "journey_id": "UJ-04",
+    "module": "user-auth",
+    "description": "As a security-conscious user, I want to use multi-factor authentication when logging in so that my account is protected from unauthorised access.",
+    "acceptance_criteria": [
+      "Given MFA is enabled, when a user logs in with valid credentials, then they are prompted for a one-time code.",
+      "Given the correct OTP is entered, when submitted, then the user is authenticated and redirected to the dashboard.",
+      "Given an incorrect OTP is entered, when submitted, then an error message is shown and the user may retry up to 3 times.",
+      "Given 3 failed OTP attempts, when the limit is reached, then the account is temporarily locked and the user is notified by email."
+    ],
+    "priority": "high",
+    "linked_modules": ["user-auth", "notification"]
+  },
+  {
+    "story_id": "US-501",
+    "title": "View and Filter Order History",
+    "journey_id": "UJ-05",
+    "module": "order-history",
+    "description": "As a registered customer, I want to view and filter my order history so that I can find past orders and track their status.",
+    "acceptance_criteria": [
+      "Given a logged-in user, when they navigate to order history, then all past orders are displayed in reverse chronological order.",
+      "Given orders are displayed, when the user filters by status (Delivered, Pending, Cancelled), then only matching orders are shown.",
+      "Given a specific order, when the user clicks it, then they see the full order detail including items, prices, and delivery status.",
+      "Given more than 10 orders, when viewing the list, then pagination is provided with 10 orders per page."
+    ],
+    "priority": "medium",
+    "linked_modules": ["order-history", "user-auth"]
+  },
+  {
+    "story_id": "US-601",
+    "title": "Advanced Product Search with Filters",
+    "journey_id": "UJ-06",
+    "module": "search",
+    "description": "As a shopper, I want to search for products using keyword and filter by category, price range, and rating so that I can quickly find what I am looking for.",
+    "acceptance_criteria": [
+      "Given a search term, when the user submits the search, then results are returned within 1 second.",
+      "Given search results, when the user applies a price range filter, then only products within that range are shown.",
+      "Given search results, when the user sorts by rating, then the highest-rated products appear first.",
+      "Given a search with zero results, when shown, then a helpful message and alternative suggestions are displayed."
+    ],
+    "priority": "medium",
+    "linked_modules": ["search", "product-catalog"]
+  },
+  {
+    "story_id": "US-701",
+    "title": "Product Detail Page with Stock Indicator",
+    "journey_id": "UJ-08",
+    "module": "product-catalog",
+    "description": "As a shopper, I want to see real-time stock availability on the product detail page so that I know whether the item is available before adding it to my cart.",
+    "acceptance_criteria": [
+      "Given a product with stock > 10, when viewing the product page, then 'In Stock' is displayed.",
+      "Given a product with stock between 1 and 10, when viewing the page, then 'Only X left' is shown.",
+      "Given a product with stock 0, when viewing the page, then 'Out of Stock' is shown and Add to Cart is disabled.",
+      "Given stock changes while the user is viewing, when the page is refreshed, then the latest stock level is shown."
+    ],
+    "priority": "low",
+    "linked_modules": ["product-catalog"]
+  }
+]

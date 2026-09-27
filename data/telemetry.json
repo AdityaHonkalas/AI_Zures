@@ -1,0 +1,127 @@
+[
+  {
+    "module": "checkout",
+    "page_views_per_day": 8500,
+    "unique_users_per_day": 3200,
+    "error_rate": 0.035,
+    "avg_load_time_ms": 1450,
+    "p95_load_time_ms": 3200,
+    "crash_rate": 0.008,
+    "top_errors": [
+      "PaymentGatewayTimeout",
+      "CartSessionExpired",
+      "CheckoutValidationError"
+    ]
+  },
+  {
+    "module": "payment",
+    "page_views_per_day": 6200,
+    "unique_users_per_day": 2800,
+    "error_rate": 0.042,
+    "avg_load_time_ms": 1800,
+    "p95_load_time_ms": 4100,
+    "crash_rate": 0.012,
+    "top_errors": [
+      "GatewayConnectionRefused",
+      "PaymentDeclinedUnexpected",
+      "TokenisationFailure"
+    ]
+  },
+  {
+    "module": "cart",
+    "page_views_per_day": 12000,
+    "unique_users_per_day": 5500,
+    "error_rate": 0.018,
+    "avg_load_time_ms": 820,
+    "p95_load_time_ms": 1900,
+    "crash_rate": 0.003,
+    "top_errors": [
+      "CartPersistenceFailure",
+      "ItemQuantityOverflow"
+    ]
+  },
+  {
+    "module": "user-auth",
+    "page_views_per_day": 9800,
+    "unique_users_per_day": 4200,
+    "error_rate": 0.012,
+    "avg_load_time_ms": 620,
+    "p95_load_time_ms": 1400,
+    "crash_rate": 0.002,
+    "top_errors": [
+      "SessionTokenExpired",
+      "OAuthProviderTimeout"
+    ]
+  },
+  {
+    "module": "notification",
+    "page_views_per_day": 1200,
+    "unique_users_per_day": 900,
+    "error_rate": 0.015,
+    "avg_load_time_ms": 200,
+    "p95_load_time_ms": 500,
+    "crash_rate": 0.001,
+    "top_errors": [
+      "SMTPConnectionFailed",
+      "EmailTemplateRenderError"
+    ]
+  },
+  {
+    "module": "order-history",
+    "page_views_per_day": 4500,
+    "unique_users_per_day": 2000,
+    "error_rate": 0.009,
+    "avg_load_time_ms": 950,
+    "p95_load_time_ms": 2100,
+    "crash_rate": 0.001,
+    "top_errors": [
+      "OrderFetchTimeout"
+    ]
+  },
+  {
+    "module": "search",
+    "page_views_per_day": 14000,
+    "unique_users_per_day": 6500,
+    "error_rate": 0.007,
+    "avg_load_time_ms": 550,
+    "p95_load_time_ms": 1200,
+    "crash_rate": 0.001,
+    "top_errors": [
+      "IndexSearchTimeout"
+    ]
+  },
+  {
+    "module": "product-catalog",
+    "page_views_per_day": 18000,
+    "unique_users_per_day": 8000,
+    "error_rate": 0.006,
+    "avg_load_time_ms": 480,
+    "p95_load_time_ms": 1100,
+    "crash_rate": 0.001,
+    "top_errors": [
+      "ImageLoadFailure"
+    ]
+  },
+  {
+    "module": "recommendations",
+    "page_views_per_day": 7000,
+    "unique_users_per_day": 3000,
+    "error_rate": 0.005,
+    "avg_load_time_ms": 310,
+    "p95_load_time_ms": 700,
+    "crash_rate": 0.0,
+    "top_errors": []
+  },
+  {
+    "module": "wishlist",
+    "page_views_per_day": 3500,
+    "unique_users_per_day": 1500,
+    "error_rate": 0.008,
+    "avg_load_time_ms": 400,
+    "p95_load_time_ms": 900,
+    "crash_rate": 0.001,
+    "top_errors": [
+      "WishlistSyncConflict"
+    ]
+  }
+]
