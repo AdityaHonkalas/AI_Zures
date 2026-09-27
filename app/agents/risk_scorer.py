@@ -8,8 +8,18 @@ Sub-modules:
   3.4 Semantic Similarity Scorer — ChromaDB cosine similarity to diff content (weight 20%)
   3.5 Composite Risk Ranker    — weighted sum + LLM justifications for top tests
 
-Input:  context["impact_map"] (ImpactMap from Agent 2)
-        context["diff_raw"]   (raw diff from Agent 1)
+Gap fix applied (3.4):
+  - The semantic scoring candidate pool is now built from TWO sources merged together:
+      a) context["repo_test_files"] — real test files discovered in the GitHub repo tree
+         (path-based test_id + module inferred from directory structure)
+      b) fixture test_cases.json — fallback when the repo has no discoverable tests
+         or for tests where fixture metadata (defect score, telemetry) is available.
+  - Real test files are embedded on-the-fly and queried against ChromaDB so their
+    paths appear in semantic results even if they were never seeded.
+
+Input:  context["impact_map"]      (ImpactMap from Agent 2)
+        context["diff_raw"]        (raw diff from Agent 1)
+        context["repo_test_files"] (real repo test files from Agent 1 — may be [])
 Output: context["risk_ranked_tests"] = RiskRankedTestList dict
 
 Scoring weights: defect=0.35, telemetry=0.25, churn=0.20, semantic=0.20
@@ -111,25 +121,92 @@ def _telemetry_scores(modules: list[str]) -> dict[str, float]:
 
 # ── 3.4 Semantic Similarity Scorer ───────────────────────────────────────────
 
+def _infer_module_from_path(path: str, known_modules: list[str]) -> str:
+    """
+    Infer a module name from a file path by checking if any known module name
+    appears in the path segments.  Returns '' if no match found.
+    """
+    path_lower = path.lower()
+    for module in known_modules:
+        if module.lower() in path_lower:
+            return module
+    return ""
+
+
+def _upsert_repo_test_files(
+    repo_test_files: list[dict],
+    known_modules: list[str],
+) -> list[str]:
+    """
+    Embed real repo test files that are not yet in ChromaDB and upsert them.
+    Returns the list of test_ids (path-derived) that were processed.
+
+    Each real test file gets a synthetic test_id = its path (with / replaced by -)
+    so it can be referenced in scoring results.
+    """
+    if not repo_test_files:
+        return []
+
+    ids_to_process: list[str] = []
+    docs: list[str] = []
+    metas: list[dict] = []
+
+    for tf in repo_test_files:
+        path = tf["path"]
+        # Use the path itself as a stable unique ID
+        tid = path.replace("/", "-").replace("\\", "-")
+        module = _infer_module_from_path(path, known_modules)
+        text = f"Test file: {path}. Module: {module}." if module else f"Test file: {path}."
+        ids_to_process.append(tid)
+        docs.append(text)
+        metas.append({
+            "test_id":    tid,
+            "test_name":  path.split("/")[-1],
+            "module":     module,
+            "journey_id": "",
+            "source":     "repo_discovery",
+        })
+
+    # Embed all at once and upsert into ChromaDB
+    try:
+        embeddings = [llm_client.embed(d) for d in docs]
+        vector_store.upsert(
+            collection="test-case-index",
+            ids=ids_to_process,
+            documents=docs,
+            embeddings=embeddings,
+            metadatas=metas,
+        )
+        logger.info("Upserted %d real repo test file(s) into ChromaDB.", len(ids_to_process))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not upsert repo test files into ChromaDB: %s", exc)
+
+    return ids_to_process
+
+
 def _semantic_scores(
     diff_text: str,
     candidate_test_ids: list[str],
 ) -> dict[str, float]:
     """
     Embed the diff text and query ChromaDB for semantic similarity to test cases.
+
+    The collection now contains both:
+      - fixture test cases (seeded by seed_chroma.py)
+      - real repo test files (upserted by _upsert_repo_test_files above)
+
     Returns dict of test_id → similarity score [0, 1].
-    Distance from ChromaDB (cosine) is in [0, 2] where 0=identical.
-    We convert to similarity = 1 - (distance / 2).
+    ChromaDB cosine distance is in [0, 2]; we convert: similarity = 1 - (distance / 2).
     """
     if not diff_text or not diff_text.strip():
         return {tid: 0.0 for tid in candidate_test_ids}
 
     try:
-        query_embedding = llm_client.embed(diff_text[:4000])  # cap text to avoid token overflow
+        query_embedding = llm_client.embed(diff_text[:4000])  # cap to avoid token overflow
         results = vector_store.query(
             collection="test-case-index",
             query_embedding=query_embedding,
-            n_results=min(len(candidate_test_ids), 20),
+            n_results=min(max(len(candidate_test_ids), 1), 40),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Semantic scoring failed: %s. Using 0.0 scores.", exc)
@@ -139,10 +216,9 @@ def _semantic_scores(
     for r in results:
         tid = r["metadata"].get("test_id", r["id"])
         distance = r["distance"]
-        # Cosine distance in [0, 2]; convert to similarity in [0, 1]
         score_by_id[tid] = max(0.0, 1.0 - (distance / 2.0))
 
-    # Tests not found in ChromaDB get a neutral score
+    # Tests absent from ChromaDB results get a neutral zero score
     for tid in candidate_test_ids:
         if tid not in score_by_id:
             score_by_id[tid] = 0.0
@@ -211,6 +287,10 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     Run Agent 3 — Risk Scorer & Test Prioritiser.
 
     Populates context["risk_ranked_tests"] with RiskRankedTestList.
+
+    Candidate pool (merged):
+      - Fixture test cases whose module is in the impacted set (always present)
+      - Real repo test files discovered by Agent 1 (added when available)
     """
     impact_map: dict = context.get("impact_map", {})
     all_impacted = (
@@ -226,24 +306,60 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
 
     logger.info("Agent 3 — Risk Scorer: scoring tests for modules %s", all_impacted)
 
-    # ── Load candidate test cases ────────────────────────────────────────────
-    all_tests: list[dict] = load_fixture("test_cases")
-    candidates = [tc for tc in all_tests if tc.get("module") in set(all_impacted)]
-    if not candidates:
-        logger.warning("No test cases found for impacted modules.")
+    # ── Step A: Upsert real repo test files into ChromaDB ────────────────────
+    # This makes them queryable by the semantic scorer alongside seeded fixture tests.
+    repo_test_files: list[dict] = context.get("repo_test_files", [])
+    repo_test_ids = _upsert_repo_test_files(repo_test_files, all_impacted)
+
+    # ── Step B: Build merged candidate pool ──────────────────────────────────
+    # Source 1: fixture tests filtered by impacted module
+    all_fixture_tests: list[dict] = load_fixture("test_cases")
+    fixture_candidates = [tc for tc in all_fixture_tests if tc.get("module") in set(all_impacted)]
+
+    # Source 2: repo test files that mention an impacted module in their path
+    repo_candidates: list[dict] = []
+    for tid in repo_test_ids:
+        # tid is the path with slashes replaced: e.g. "tests-test_cart.py"
+        # infer module from the original path stored during upsert
+        raw_path = tid.replace("-", "/", tid.count("-") - tid.count("_"))  # best-effort reverse
+        module = _infer_module_from_path(tid, all_impacted)
+        if module:
+            repo_candidates.append({
+                "test_id":    tid,
+                "test_name":  tid.split("-")[-1],
+                "module":     module,
+                "journey_id": "",
+                "browser":    "any",
+                "environment": "any",
+                "estimated_duration_s": 60,
+                "coverage_fingerprint": "",
+                "source":     "repo_discovery",
+            })
+
+    # Merge: fixture candidates take priority (they have richer metadata for scoring)
+    fixture_ids = {tc["test_id"] for tc in fixture_candidates}
+    merged_candidates = fixture_candidates + [r for r in repo_candidates if r["test_id"] not in fixture_ids]
+
+    if not merged_candidates:
+        logger.warning("No candidate test cases found for impacted modules.")
         context["risk_ranked_tests"] = {"ranked_tests": []}
         return context
 
-    # ── Compute individual scorer outputs ────────────────────────────────────
+    logger.info(
+        "Candidate pool: %d fixture test(s) + %d repo test file(s) = %d total.",
+        len(fixture_candidates), len(repo_candidates), len(merged_candidates),
+    )
+
+    # ── Step C: Compute individual scorer outputs ────────────────────────────
     defect_map    = _defect_scores(all_impacted)
     churn_map     = _churn_scores(all_impacted)
     telemetry_map = _telemetry_scores(all_impacted)
-    candidate_ids = [tc["test_id"] for tc in candidates]
+    candidate_ids = [tc["test_id"] for tc in merged_candidates]
     semantic_map  = _semantic_scores(context.get("diff_raw", ""), candidate_ids)
 
-    # ── Composite scoring ────────────────────────────────────────────────────
+    # ── Step D: Composite scoring ────────────────────────────────────────────
     ranked: list[dict] = []
-    for tc in candidates:
+    for tc in merged_candidates:
         module = tc.get("module", "")
         d_score = defect_map.get(module, 0.0)
         c_score = churn_map.get(module, 0.0)

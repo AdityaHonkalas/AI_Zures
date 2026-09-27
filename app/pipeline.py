@@ -16,6 +16,9 @@ def _make_context(pr_url: str) -> dict[str, Any]:
         "pr_url": pr_url,
         "pr_metadata": {},
         "diff_raw": "",
+        # Populated by Agent 1: real test files discovered in the repo via GitHub Trees API.
+        # Used by Agent 3 to build the semantic scoring candidate pool from actual test paths.
+        "repo_test_files": [],
         "change_context": {},
         "impact_map": {},
         "risk_ranked_tests": {},
