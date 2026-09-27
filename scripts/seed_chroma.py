@@ -6,13 +6,15 @@ Run once before starting the Flask app:
 
 This script:
   1. Loads test_cases.json and defect_history.json from data/
-  2. Embeds each item's descriptive text using nomic-embed-text via Ollama
+  2. Embeds each item's descriptive text using the configured LLM backend
+     (OpenAI-compatible gateway when GATEWAY_URL is set, otherwise local Ollama)
   3. Upserts into ChromaDB collections 'test-case-index' and 'defect-history-index'
-  4. Is idempotent — skips items already present in ChromaDB
+  4. Is idempotent — safe to re-run; existing items are overwritten with fresh embeddings
 
 Requirements:
-  - Ollama must be running with nomic-embed-text pulled
-  - .env must be configured (or CHROMA_DB_PATH env var set)
+  - .env must be configured with LLM backend credentials (GATEWAY_URL+GATEWAY_KEY or
+    OLLAMA_BASE_URL with Ollama running locally)
+  - CHROMA_DB_PATH must be writable (defaults to ./chroma_db)
 """
 from __future__ import annotations
 
@@ -107,8 +109,13 @@ def seed_defect_history() -> int:
 
 
 if __name__ == "__main__":
+    from app.utils.llm_client import _use_gateway, _gateway_base, _ollama_base  # type: ignore[attr-defined]
+    backend_label = (
+        f"gateway  ({_gateway_base()})" if _use_gateway()
+        else f"ollama   ({_ollama_base()})"
+    )
     print("Seeding ChromaDB from fixture files...")
-    print(f"  Ollama URL:   {os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')}")
+    print(f"  LLM backend:   {backend_label}")
     print(f"  ChromaDB path: {os.environ.get('CHROMA_DB_PATH', './chroma_db')}")
     print()
 
